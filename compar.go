@@ -3,9 +3,11 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
+	"math/big"
 	"unsafe"
 
 	// mathrand "math/rand"
@@ -18,16 +20,27 @@ var (
 )
 
 func main() {
-	echo := int(1e5)
+	echo := int(1e3)
 
-	DXie(echo)
+	// DXie(echo)
+	// DOur(echo)
+	// DSutrala(echo)
+	// DGuo(echo)
+	// DZhang(echo)
+	// println()
+
 	ASXie(echo)
-	CSXie(echo)
-	println()
-	DOur(echo)
 	ASOur(echo)
-	CSOur(echo)
+	ASSutrala(echo)
+	ASGuo(echo)
+	ASZhang(echo)
+	println()
 
+	// CSXie(echo)
+	// CSOur(echo)
+	// CSSutrala(echo)
+	// CSGuo(echo)
+	// CSZhang(echo)
 }
 func DXie(echo int) {
 	fmt.Print("Xie D echo:", echo, "; time:")
@@ -254,6 +267,450 @@ func CSOur(echo int) {
 	Ot := time.Now().UnixNano()
 	oot := float64(Ot - ot)
 	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+func DSutrala(echo int) { //smart device
+	fmt.Print("Sutrala D echo:", echo, "; time:")
+	Cert := RS(Byt)
+	s := RS(Byt)
+	TID := RS(Byt)
+	TS := RS(8)
+	TS1 := RS(8)
+	K1 := RS(Byt)
+	R := RS(Byt)
+	C := RS(Byt)
+	RIDcn := RS(Byt)
+	RIDsd := RS(Byt)
+	PubRA := RS(Byt)
+	PubCN := RS(Byt)
+	PubSD := RS(Byt)
+	prSD := RS(Byt)
+	TCUk := RS(Byt)
+	TIDUk := RS(Byt)
+
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		CertCN := Xor(Cert, Hash(concat(TID, s, TS)))
+		Hash(concat(TID, s, K1, R, C, CertCN, RIDcn, RIDsd, TS1, TS)) //Xi
+		Xor(C, Hash(concat(s, TS, TID, RIDsd)))
+		ScalarMul(curve, k, Gx, Gy) //Xi*PubRA
+		Hash(concat(RIDcn, PubRA, PubCN))
+		ScalarMul(curve, k, Gx, Gy)     //h*RCN
+		ScalarMul(curve, k, Gx, Gy)     //Cert*P
+		PointAdd(curve, rx, ry, Qx, Qy) //Xi*PubRA+h*RCN
+		k2 := RS(Byt)
+		TS2 := RS(8)
+		kk2 := Hash(concat(k2, s, prSD, TS2))
+		ScalarMul(curve, k, Gx, Gy) //k2*P
+		Hash(concat(TID, RIDsd, kk2, PubSD, TS2))
+		ScalarMul(curve, k, Gx, Gy) //h*kk2
+		PointAdd(curve, rx, ry, Qx, Qy)
+		ScalarMul(curve, k, Gx, Gy) //k2*K1
+		SK := Hash(concat(prSD, Hash(concat(TCUk, TS1)), RIDsd, TIDUk, TS, TS2))
+		Hash(concat(SK, TS1, TS2)) //SKV
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+func ASSutrala(echo int) { //Mobile device
+	fmt.Print("Sutrala AS echo:", echo, "; time:")
+	Byts := RS(Byt)
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		Hash(concat(Byts, Byts))                   //sigma_uk
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))  //a*_k
+		Hash(concat(Byts, Byts))                   //PIDUk
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))  //prUk
+		Xor(Byts, Hash(concat(Byts, Byts)))        //cert
+		Hash(concat(Byts, Byts, Byts, Byts, Byts)) //WUk
+		RS(Byt)                                    //k1
+		TS1 := RS(8)                               //TS1
+		Hash(concat(Byts, Byts, Byts))             //k'1
+		ScalarMul(curve, k, Gx, Gy)                //K'1
+		Xor(Byts, Hash(concat(Byts, Byts, TS1)))   //RIDSD
+		Hash(concat(Byts, Byts, Byts, Byts, TS1))
+		ScalarMul(curve, k, Gx, Gy)                    //h*k'1
+		PointAdd(curve, rx, ry, Qx, Qy)                //cert+
+		RS(Byt)                                        //TIDUk
+		Xor(Byts, Hash(concat(Byts, Byts, Byts, TS1))) //TID new
+		Hash(concat(TS1, Byts, Byts, Byts))            //TCUk
+		Xor(Byts, Hash(concat(Byts, TS1, Byts)))
+
+		Hash(concat(Byts, Byts, Byts, Byts))
+		ScalarMul(curve, k, Gx, Gy) //h*RSDj
+		Hash(concat(Byts, Byts, Byts, Byts, TS1))
+		ScalarMul(curve, k, Gx, Gy) //h*K'2
+		PointAdd(curve, rx, ry, Qx, Qy)
+		ScalarMul(curve, k, Gx, Gy)                                       //Cert*P
+		ScalarMul(curve, k, Gx, Gy)                                       //k1*K2
+		Hash(concat(Byts, Hash(concat(Byts, TS1)), Byts, Byts, TS1, TS1)) //SK
+		Hash(concat(Byts, TS1, TS1))                                      //SKV
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+func CSSutrala(echo int) { //controller
+	fmt.Print("Sutrala CS echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		Hash(concat(Byts, Byts, Byts))
+		Hash(concat(Byts, Byts, Byts, Byts, TS))
+		ScalarMul(curve, k, Gx, Gy) //h*RUK
+		ScalarMul(curve, k, Gx, Gy) //h*K1'
+		ScalarMul(curve, k, Gx, Gy) //Cert*P
+		PointAdd(curve, rx, ry, Qx, Qy)
+		PointAdd(curve, rx, ry, Qx, Qy)
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Xor(Hash(concat(Byts, Byts)), Hash(concat(Byts, TS, Byts, Byts)))
+		Hash(concat(Byts, Byts, Byts, Byts, Byts, Byts, Byts, Byts, TS, TS))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts, TS)))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+func DGuo(echo int) { //wearable device
+	fmt.Print("Guo D echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		RS(Byt)
+		RS(8)
+		Xor(Byts, Hash(concat(Byts, Byts)))
+		Hash(concat(Byts, TS, Byts, Byts))
+
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Hash(concat(Byts, Byts, Hash(concat(Byts, Byts)), Byts, Byts, TS)) //SK
+		Hash(concat(Byts, Byts, Byts, TS))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+func ASGuo(echo int) { //User
+	fmt.Print("Guo AS echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		Xor(Byts, Hash(concat(Byts, Byts)))
+		Hash(concat(Byts, Byts))
+		Hash(concat(Byts, Byts))
+		Xor(Byts, Xor(Byts, Hash(Xor(Byts, Byts))))
+		Hash(concat(Byts, Byts, Byts))
+		Hash(Xor(Xor(Byts, Byts), Byts))
+
+		Xor(Byts, Hash(Xor(Xor(Byts, Byts), Byts)))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))
+		Hash(concat(Byts, Byts, Byts, Byts))
+		Xor(Byts, Hash(concat(Byts, Byts)))
+		Hash(concat(Byts, Byts, Byts, Byts, Byts, TS))
+
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Xor(Xor(Byts, Hash(Xor(Xor(Byts, Byts), Byts))), Byts)
+		Hash(concat(Byts, Byts, Byts, Byts, TS, TS))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts, Byts, TS, TS)))
+		Hash(concat(Byts, Byts, Byts, TS, TS))
+		Hash(concat(Byts, Byts, Byts, TS, TS))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))
+
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Xor(Byts, Hash(concat(Byts, Byts, TS)))
+		Hash(concat(Byts, Byts, Byts, Byts, TS))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+func CSGuo(echo int) { //server
+	fmt.Print("Guo CS echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		Xor(Byts, Hash(concat(Byts, Byts)))
+		Hash(concat(Byts, Byts, Byts))
+		Xor(concat(Byts, Byts, TS))
+		Hash(concat(Byts, Byts, Byts, TS))
+		Hash(concat(Byts, Byts, Byts, Byts, Byts, TS))
+
+		Hash(concat(Byts, Byts))
+		Xor(Byts, Hash(concat(Byts, Byts)))
+		Xor(Byts, Hash(Xor(Byts, Byts)))
+		Hash(concat(Byts, Byts, Byts, Byts))
+
+		Xor(TS, Hash(concat(Byts, Byts, Byts)))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts, TS)))
+		Hash(concat(Byts, Byts, Byts, Byts, TS, TS))
+		Hash(concat(Byts, Byts, Byts, TS, TS))
+		Hash(concat(Byts, Byts, Hash(concat(Byts, Byts)), Byts, Byts, TS))
+		Hash(concat(Byts, Byts, Byts, TS, TS))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts, Byts, TS, TS)))
+		RS(Byt)
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))
+		Xor(Byts, Hash(concat(Byts, Byts, Byts)))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+func DZhang(echo int) { //wearable device
+	fmt.Print("Zhang D echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+
+	n := randBits(256)
+	x := randBits(256)
+	mod := new(big.Int).Lsh(big.NewInt(1), 256)
+	TT(n, x, mod)
+
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		Hash(concat(Byts, Byts))                        //sigma1
+		Hash(concat(Byts, Byts, Byts))                  //Xi
+		Hash(Hash(concat(Byts, Xor(Byts, Byts), Byts))) //Wi
+		RS(Byt)                                         //r2
+		RS(8)                                           //tau1
+		TT(n, x, mod)                                   //C1
+		TT(n, x, mod)                                   //C2
+		Xor(Byts, Hash(concat(Byts, Xor(Byts, Byts))))  //C3
+		Hash(concat(Byts, Byts, Byts, Byts, Byts))      //C4
+
+		TT(n, x, mod) //C9
+		Xor(Byts, Byts)
+		Hash(concat(Byts, Byts, Byts, TS))
+		Hash(concat(Byts, Byts, Byts, TS))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+func ASZhang(echo int) { //Drone
+	fmt.Print("Zhang AS echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+	n := randBits(256)
+	x := randBits(256)
+	mod := new(big.Int).Lsh(big.NewInt(1), 256)
+	TT(n, x, mod)
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		Xor(Byts, Hash(concat(Byts, TS)))
+		TT(n, x, mod)
+		Hash(concat(Byts, Byts, Byts, Byts, TS))
+		RS(Byt)
+		RS(Byt)
+		RS(8)
+		TT(n, x, mod)
+		TT(n, x, mod)
+		Xor(Byts, Byts)
+		Hash(concat(Byts, Byts, Byts, TS))
+		Hash(concat(Byts, Byts, Byts, TS))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+func CSZhang(echo int) { //cc
+	fmt.Print("Zhang CS echo:", echo, "; time:")
+	Byts := RS(Byt)
+	TS := RS(8)
+	n := randBits(256)
+	x := randBits(256)
+	mod := new(big.Int).Lsh(big.NewInt(1), 256)
+	TT(n, x, mod)
+	curve := elliptic.P256()
+	Gx, Gy := curve.Params().Gx, curve.Params().Gy
+	k := big.NewInt(12345)
+	rx, ry := ScalarMul(curve, k, Gx, Gy)
+	r, _ := rand.Int(rand.Reader, curve.Params().N)
+	Qx, Qy := curve.ScalarBaseMult(r.Bytes())
+	// rx2, ry2 := PointAdd(curve, rx, ry, Qx, Qy)
+	PointAdd(curve, rx, ry, Qx, Qy)
+
+	ot := time.Now().UnixNano()
+	for i := 0; i < echo; i++ {
+		TT(n, x, mod)
+		TT(n, x, mod)
+		TT(n, x, mod)
+		Hash(concat(Byts, Byts, Byts))
+		Xor(Byts, Hash(concat(Byts, Byts)))
+		Hash(concat(Byts, Byts, Byts, Byts, TS))
+		RS(Byt)
+		RS(8)
+		TT(n, x, mod)
+		TT(n, x, mod)
+		Xor(concat(Byts, Byts, Byts), Hash(concat(Byts, TS)))
+		Hash(concat(Byts, Byts, Byts, Byts, TS))
+	}
+	Ot := time.Now().UnixNano()
+	oot := float64(Ot - ot)
+	fmt.Println(oot/1e6, "ms ", Ot-ot, "ns")
+}
+
+// ---------- Chebyshev chaotic-map ----------
+var memo = make(map[string]*big.Int)
+
+func TT(n, x, mod *big.Int) *big.Int {
+	for k := range memo {
+		delete(memo, k)
+	}
+	return T(n, x, mod)
+}
+
+func T(n, x, mod *big.Int) *big.Int {
+	key := n.String() + "," + x.String()
+	if val, ok := memo[key]; ok {
+		return new(big.Int).Set(val)
+	}
+	zero := big.NewInt(0)
+	one := big.NewInt(1)
+	two := big.NewInt(2)
+	result := new(big.Int)
+
+	switch n.Cmp(zero) {
+	case 0:
+		result.Set(one)
+	case 1:
+		if n.Cmp(one) == 0 {
+			result.Mod(x, mod)
+		} else {
+			rem := new(big.Int).Mod(n, two)
+			if rem.Cmp(zero) == 0 { // even
+				half := new(big.Int).Rsh(n, 1)
+				temp := T(half, x, mod)
+				sqr := new(big.Int).Mul(temp, temp)
+				result.Sub(new(big.Int).Mul(two, sqr), one)
+				result.Mod(result, mod)
+			} else { // odd
+				nSub1 := new(big.Int).Sub(n, one)
+				nAdd1 := new(big.Int).Add(n, one)
+				h1 := new(big.Int).Rsh(nSub1, 1)
+				h2 := new(big.Int).Rsh(nAdd1, 1)
+				t1 := T(h1, x, mod)
+				t2 := T(h2, x, mod)
+				prod := new(big.Int).Mul(t1, t2)
+				result.Sub(new(big.Int).Mul(two, prod), x)
+				result.Mod(result, mod)
+			}
+		}
+	}
+	memo[key] = new(big.Int).Set(result)
+	return result
+}
+
+func ScalarMul(curve elliptic.Curve, k *big.Int, px, py *big.Int) (rx, ry *big.Int) {
+	if px == nil && py == nil {
+		// 使用基点 G
+		return curve.ScalarBaseMult(k.Bytes())
+	}
+	return curve.ScalarMult(px, py, k.Bytes())
+}
+
+// PointAdd 计算 P + Q，返回结果点 (rx, ry)
+func PointAdd(curve elliptic.Curve, px, py, qx, qy *big.Int) (rx, ry *big.Int) {
+	return curve.Add(px, py, qx, qy)
+}
+func randBytes(n int) []byte {
+	b := make([]byte, n)
+	rand.Read(b)
+	return b
+}
+
+func randBits(bit int) *big.Int {
+	max := new(big.Int).Lsh(big.NewInt(1), uint(bit))
+	min := new(big.Int).Lsh(big.NewInt(1), uint(bit-1))
+	r, _ := rand.Int(rand.Reader, new(big.Int).Sub(max, min))
+	return r.Add(r, min)
 }
 
 /**------------*/
